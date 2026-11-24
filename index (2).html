@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OrderDesk — Customer-specific ordering</title>
+<meta name="theme-color" content="#0f766e">
+<meta name="description" content="Demo: customers log in with their name, see only the items assigned to them, and place orders. Admin gets notified instantly.">
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--ink:#14213d;--muted:#64748b;--line:#e2e8f0;--brand:#0f766e;--brand2:#115e59;--soft:#e6f4f2;--warn:#b45309;--warnbg:#fef3c7;--bad:#b91c1c;--badbg:#fee2e2;--ok:#15803d;--okbg:#dcfce7;--blue:#1d4ed8;--bluebg:#dbeafe;--r:12px;--sh:0 1px 2px rgba(15,23,42,.05),0 4px 14px rgba(15,23,42,.05)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent;min-height:100vh}
+body.noscroll{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3{margin:0}
+.wrap{max-width:980px;margin:0 auto;padding:0 14px}
+.muted,.meta{color:var(--muted)}
+.meta{font-size:12.5px}
+.ink{color:var(--ink)}
+.center{text-align:center}
+/* header */
+header.top{position:sticky;top:0;z-index:20;background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+header.top .wrap{display:flex;align-items:center;gap:10px;height:58px}
+.mark{width:32px;height:32px;border-radius:9px;background:#fff;color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.brand{font-weight:700;font-size:17px;white-space:nowrap}
+.tag{font-size:11px;background:rgba(255,255,255,.2);padding:2px 7px;border-radius:6px;margin-left:4px;vertical-align:middle;font-weight:600}
+.who{margin-left:auto;font-size:13px;text-align:right;line-height:1.2;min-width:0;overflow:hidden}
+.who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+.who span{opacity:.8;font-size:11.5px}
+.hbtn{background:rgba(255,255,255,.16);border:0;color:#fff;border-radius:9px;padding:8px 11px;font-size:13px;position:relative;flex:none}
+.hbtn:hover{background:rgba(255,255,255,.26)}
+.hbtn .dot{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;font-weight:700;border:2px solid var(--brand)}
+/* tabs, chips */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:14px 0 6px;scrollbar-width:none}
+.tabs::-webkit-scrollbar,.chips::-webkit-scrollbar{display:none}
+.tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;white-space:nowrap;font-weight:600;font-size:14px}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.cnt{display:inline-block;font-size:12px;font-weight:600;color:var(--muted);margin-left:4px}
+.tab.on .cnt{color:#cbd5e1}
+.badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;text-align:center;margin-left:6px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.chips.wrapc{flex-wrap:wrap;overflow:visible}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap}
+.chip.on{background:var(--soft);border-color:var(--brand);color:var(--brand2);font-weight:600}
+/* basics */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;font-weight:600;font-size:14px;white-space:nowrap}
+.btn:hover{border-color:#cbd5e1}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand2)}
+.btn.danger{color:var(--bad);border-color:#fecaca}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
+.btn.block{display:block;width:100%;margin-top:14px}
+.btn.wa{background:#16a34a;border-color:#16a34a;color:#fff;text-decoration:none;display:inline-block}
+.f{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 12px;outline:none;font-size:15px}
+.f:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--soft)}
+select.f{padding:10px}
+label.l{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px;font-weight:600}
+.err{color:var(--bad);font-size:13px;min-height:18px;margin-top:6px}
+.toolbar{display:flex;gap:8px;align-items:center;margin:8px 0}
+.toolbar .f{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media(max-width:520px){.grid2{grid-template-columns:1fr}}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.tip{background:var(--soft);border:1px solid #b6e0da;color:var(--brand2);border-radius:var(--r);padding:10px 12px;font-size:13.5px;margin:8px 0}
+.sect{padding:16px;margin-bottom:12px}
+.sect h3{font-size:16px;margin-bottom:4px}
+.sect p{margin:4px 0 10px;font-size:13.5px;color:var(--muted)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* login */
+.login{max-width:420px;margin:0 auto;padding:44px 16px 30px}
+.lmark{width:56px;height:56px;border-radius:16px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px;margin-bottom:14px}
+.login h1{font-size:26px}
+.login>p{margin:4px 0 18px}
+.lcard{padding:16px;margin-bottom:14px}
+.lcard label.l{margin-top:0}
+.demo{margin:0 0 14px}
+.demo .meta{margin-bottom:6px}
+details.admin summary{cursor:pointer;font-weight:600;color:var(--muted);list-style:none}
+details.admin summary::-webkit-details-marker{display:none}
+details.admin summary::after{content:" ›"}
+details.admin[open] summary{margin-bottom:12px}
+/* shop */
+.list{display:flex;flex-direction:column;gap:8px;padding-bottom:120px}
+.item{display:flex;align-items:center;gap:10px;padding:11px 12px}
+.item.has{border-color:var(--brand);background:#f7fcfb}
+.info{flex:1;min-width:0}
+.nm{font-weight:600}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none;background:#fff}
+.step button{width:38px;height:40px;border:0;background:#f8fafc;font-size:20px;line-height:1;color:var(--brand2)}
+.step button:active{background:var(--soft)}
+.step input{width:48px;height:40px;border:0;text-align:center;font-weight:700;outline:none;font-size:15px;-moz-appearance:textfield}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:15;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(15,23,42,.08);transform:translateY(110%);transition:transform .2s}
+.bar.show{transform:none}
+.bar .wrap{display:flex;align-items:center;gap:8px;padding:0}
+.bsum{flex:1;line-height:1.25}
+.bsum b{display:block}
+/* orders */
+.olist{display:flex;flex-direction:column;gap:8px;padding-bottom:40px}
+.order.unseen{border-left:4px solid var(--blue)}
+.ohead{display:flex;justify-content:space-between;gap:10px;padding:12px 14px;cursor:pointer}
+.ono{font-weight:700}
+.amt{text-align:right;font-weight:700;white-space:nowrap}
+.obody{border-top:1px dashed var(--line);padding:10px 14px 14px}
+.note{background:#f8fafc;border-radius:8px;padding:8px 10px;font-size:13.5px;margin:10px 0}
+.pill{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;vertical-align:middle;margin-left:4px;white-space:nowrap}
+.s-New{background:var(--bluebg);color:var(--blue)}
+.s-Accepted{background:var(--warnbg);color:var(--warn)}
+.s-Dispatched{background:var(--okbg);color:var(--ok)}
+.s-Cancelled{background:var(--badbg);color:var(--bad)}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}
+.t th,.t td{padding:7px 4px;text-align:left;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.t th{font-size:12px;color:var(--muted);font-weight:600}
+.t tfoot th{color:var(--ink);font-size:14px;border-bottom:0}
+.t .r{text-align:right;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 10px}
+.stat{padding:10px 12px}
+.stat b{display:block;font-size:20px;line-height:1.2}
+.stat span{font-size:12px;color:var(--muted)}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
+/* rows */
+.rows{overflow:hidden;margin-bottom:40px}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer}
+.row:last-child{border-bottom:0}
+.row:hover{background:#fafbfc}
+.av{width:36px;height:36px;border-radius:50%;background:var(--soft);color:var(--brand2);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.rt{text-align:right;font-size:13px;white-space:nowrap}
+/* modal */
+.mback{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+.mbox{background:#fff;width:100%;max-width:680px;max-height:92vh;border-radius:16px 16px 0 0;display:flex;flex-direction:column;animation:up .2s}
+@media(min-width:720px){.mback{align-items:center}.mbox{border-radius:16px;max-height:88vh}}
+.mhead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.mhead h3{font-size:17px;flex:1}
+.x{border:0;background:#f1f5f9;border-radius:8px;width:32px;height:32px;font-size:20px;line-height:1}
+.mbody{padding:6px 16px 16px;overflow:auto;-webkit-overflow-scrolling:touch}
+.mfoot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.mfoot .sp{flex:1}
+.ghead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 6px;font-weight:700;font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.ghead .btnrow{text-transform:none;letter-spacing:0}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.ck{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:13.5px;line-height:1.3}
+.ck.on{border-color:var(--brand);background:var(--soft)}
+.ck input{margin-top:2px;accent-color:var(--brand);flex:none;width:16px;height:16px}
+.selbar{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+.selbar b{color:var(--brand2)}
+.done{text-align:center;padding:10px 0}
+.done .big{width:56px;height:56px;border-radius:50%;background:var(--okbg);color:var(--ok);display:grid;place-items:center;font-size:28px;margin:6px auto 10px}
+/* toasts */
+#toasts{position:fixed;top:68px;right:12px;left:12px;z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none}
+.toast{pointer-events:auto;max-width:380px;background:var(--ink);color:#fff;padding:12px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);animation:slide .25s;font-size:14px;cursor:default}
+.toast.click{cursor:pointer;border-left:4px solid #60a5fa}
+.toast.out{opacity:0;transform:translateX(20px);transition:.3s}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(30px);opacity:.5}}
+@keyframes slide{from{transform:translateX(30px);opacity:0}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   OrderDesk demo — customer-specific item ordering
+   Data is stored in this browser (localStorage) for demo use.
+   ============================================================ */
+const KEY = 'orderdesk_demo_v1', SKEY = 'orderdesk_session_v1';
+const STATUSES = ['New', 'Accepted', 'Dispatched', 'Cancelled'];
+
+const ITEMS = `Staples|Basmati Rice 5 kg|Bag|545
+Staples|Sona Masoori Rice 25 kg|Bag|1380
+Staples|Wheat Atta 10 kg|Bag|425
+Staples|Maida 1 kg|Pkt|48
+Staples|Sooji 1 kg|Pkt|52
+Staples|Besan 1 kg|Pkt|98
+Staples|Poha 1 kg|Pkt|62
+Staples|Sugar 1 kg|Pkt|46
+Staples|Jaggery 1 kg|Pkt|70
+Staples|Iodised Salt 1 kg|Pkt|24
+Staples|Rock Salt 1 kg|Pkt|60
+Oil & Ghee|Mustard Oil 1 L|Btl|165
+Oil & Ghee|Mustard Oil 15 L|Tin|2350
+Oil & Ghee|Soybean Oil 1 L|Pouch|135
+Oil & Ghee|Sunflower Oil 1 L|Pouch|150
+Oil & Ghee|Sunflower Oil 15 L|Tin|2150
+Oil & Ghee|Groundnut Oil 1 L|Btl|210
+Oil & Ghee|Desi Ghee 1 L|Tin|640
+Oil & Ghee|Desi Ghee 500 ml|Pouch|330
+Oil & Ghee|Vanaspati 1 kg|Pkt|150
+Oil & Ghee|Coconut Oil 500 ml|Btl|160
+Pulses|Toor Dal 1 kg|Pkt|165
+Pulses|Moong Dal 1 kg|Pkt|130
+Pulses|Chana Dal 1 kg|Pkt|95
+Pulses|Urad Dal 1 kg|Pkt|140
+Pulses|Masoor Dal 1 kg|Pkt|105
+Pulses|Rajma 1 kg|Pkt|150
+Pulses|Kabuli Chana 1 kg|Pkt|135
+Pulses|Kala Chana 1 kg|Pkt|90
+Pulses|Moong Sabut 1 kg|Pkt|125
+Pulses|Lobia 1 kg|Pkt|110
+Spices|Turmeric Powder 200 g|Pkt|58
+Spices|Red Chilli Powder 200 g|Pkt|72
+Spices|Coriander Powder 200 g|Pkt|50
+Spices|Garam Masala 100 g|Pkt|78
+Spices|Jeera 100 g|Pkt|65
+Spices|Rai 100 g|Pkt|22
+Spices|Hing 50 g|Box|95
+Spices|Black Pepper 100 g|Pkt|110
+Spices|Kitchen King Masala 100 g|Box|75
+Spices|Chaat Masala 100 g|Box|60
+Spices|Elaichi 50 g|Pkt|180
+Beverages|Tea Leaf 250 g|Pkt|130
+Beverages|Tea Leaf 1 kg|Pkt|480
+Beverages|Instant Coffee 100 g|Jar|320
+Beverages|Malt Health Drink 500 g|Jar|260
+Beverages|Packaged Water 1 L (12)|Case|180
+Beverages|Soft Drink 750 ml (24)|Case|840
+Beverages|Fruit Juice 1 L|Pack|110
+Snacks|Namkeen Mixture 400 g|Pkt|95
+Snacks|Glucose Biscuits (24)|Box|240
+Snacks|Cream Biscuits (24)|Box|480
+Snacks|Potato Chips (20)|Box|380
+Snacks|Instant Noodles (48)|Box|620
+Snacks|Cornflakes 500 g|Box|185
+Snacks|Rusk 300 g|Pkt|55
+Snacks|Roasted Peanuts 500 g|Pkt|90
+Personal Care|Bath Soap (4)|Pack|140
+Personal Care|Shampoo 180 ml|Btl|165
+Personal Care|Shampoo Sachets (16)|Strip|32
+Personal Care|Toothpaste 200 g|Tube|115
+Personal Care|Toothbrush (4)|Pack|90
+Personal Care|Hair Oil 200 ml|Btl|120
+Personal Care|Face Cream 50 g|Jar|145
+Personal Care|Hand Wash 200 ml|Btl|99
+Personal Care|Talcum Powder 100 g|Can|85
+Cleaning|Detergent Powder 1 kg|Pkt|110
+Cleaning|Detergent Bar (4)|Pack|95
+Cleaning|Dishwash Bar (3)|Pack|60
+Cleaning|Dishwash Liquid 500 ml|Btl|115
+Cleaning|Floor Cleaner 1 L|Btl|175
+Cleaning|Toilet Cleaner 500 ml|Btl|98
+Cleaning|Phenyl 1 L|Btl|70
+Cleaning|Steel Scrubber (3)|Pack|45
+Cleaning|Garbage Bags (30)|Roll|85
+Cleaning|Agarbatti (12)|Box|120
+Cleaning|Matchbox (10)|Bundle|20
+Cleaning|Candles (6)|Pack|50`.split('\n');
+
+const SUR = ['Sharma','Verma','Gupta','Agarwal','Jain','Patel','Shah','Mehta','Singh','Yadav','Mishra','Tiwari','Pandey','Dubey','Saxena','Kapoor','Malhotra','Bansal','Goyal','Mittal','Joshi','Kulkarni','Deshmukh','Patil','Reddy'];
+const SUF = ['Traders','Enterprises','Stores','& Sons','Agencies','Distributors','Mart','Brothers'];
+const DEMO = [['Sharma Traders',40],['Gupta Enterprises',30],['Patel Stores',50],['Jain Agencies',50]];
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr = n => '₹' + Number(n || 0).toLocaleString('en-IN', {maximumFractionDigits: 2});
+const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const initials = n => String(n).replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+const when = t => new Date(t).toLocaleString('en-IN', {day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit'});
+const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+/* ---------- demo data ---------- */
+function seed(){
+  const r = rng(20261124);
+  const items = ITEMS.map((s, i) => { const p = s.split('|'); return {id: 'I' + (i + 1), code: 'ITM-' + String(i + 1).padStart(3, '0'), cat: p[0], name: p[1], uom: p[2], rate: +p[3]}; });
+  const pick = n => { const ids = items.map(x => x.id); for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; } return ids.slice(0, n).sort((a, b) => a.slice(1) - b.slice(1)); };
+  const phone = () => '9' + String(Math.floor(r() * 1e9)).padStart(9, '0');
+  const customers = [], seen = new Set();
+  const add = (name, n) => { seen.add(norm(name)); customers.push({id: 'C' + (customers.length + 1), name, phone: phone(), items: pick(n)}); };
+  DEMO.forEach(([n, c]) => add(n, c));
+  while (customers.length < 100) { const n = SUR[Math.floor(r() * SUR.length)] + ' ' + SUF[Math.floor(r() * SUF.length)]; if (!seen.has(norm(n))) add(n, 20 + Math.floor(r() * 31)); }
+  const d = {v: 1, seq: 1000, items, customers, orders: [], settings: {pin: '1234', wa: ''}};
+  const now = Date.now();
+  [[1, 'Dispatched', 26, ''], [4, 'Accepted', 5, 'Please deliver before 11 am'], [2, 'New', 0.3, '']].forEach(([ci, st, h, note]) => {
+    const c = customers[ci];
+    const lines = c.items.slice(0, 4 + ci % 3).map(id => { const it = items.find(x => x.id === id); return line(it, 1 + Math.floor(r() * 10)); });
+    d.orders.push(mkOrder(d, c, lines, note, now - h * 3600e3, st));
+  });
+  return d;
+}
+const line = (it, qty) => ({item: it.id, code: it.code, name: it.name, uom: it.uom, rate: it.rate, qty});
+function mkOrder(d, c, lines, note, at, status){
+  return {id: uid(), no: 'SO-' + (++d.seq), cust: c.id, custName: c.name, lines, total: sum(lines, l => l.qty * l.rate), note: note || '', status: status || 'New', at: at || Date.now(), seen: !!status && status !== 'New'};
+}
+
+/* ---------- storage ---------- */
+function readDb(){ try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && d.v === 1) return d; } catch (e) {} return null; }
+function persist(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+function mutate(fn){ const fresh = readDb(); if (fresh) db = fresh; fn(db); persist(); }
+let db = readDb(); if (!db) { db = seed(); persist(); }
+
+let S = null; try { S = JSON.parse(sessionStorage.getItem(SKEY)); } catch (e) {}
+function setS(v){ S = v; try { v ? sessionStorage.setItem(SKEY, JSON.stringify(v)) : sessionStorage.removeItem(SKEY); } catch (e) {} }
+
+const UI0 = () => ({tab: null, q: '', cat: 'All', st: 'All', oq: '', cq: '', iq: '', open: {}});
+let ui = UI0(), cart = {}, known = new Set(), audio = null, edit = null;
+const cust = id => db.customers.find(c => c.id === id);
+const item = id => db.items.find(i => i.id === id);
+const A = {};
+
+/* ---------- render ---------- */
+function render(){
+  const a = document.activeElement, fid = a && a.id, s1 = a && a.selectionStart, s2 = a && a.selectionEnd;
+  let html;
+  if (!S) html = viewLogin();
+  else if (S.role === 'admin') html = viewAdmin();
+  else { const c = cust(S.id); if (!c) { setS(null); html = viewLogin(); } else html = viewCust(c); }
+  $('#app').innerHTML = html;
+  if (fid) { const el = document.getElementById(fid); if (el && el.closest('#app')) { el.focus(); try { el.setSelectionRange(s1, s2); } catch (e) {} } }
+  if (S && S.role === 'cust') bar();
+  const unseen = S && S.role === 'admin' ? db.orders.filter(o => !o.seen).length : 0;
+  document.title = (unseen ? '(' + unseen + ') ' : '') + 'OrderDesk';
+}
+const topbar = right => `<header class="top"><div class="wrap"><div class="mark">OD</div><div class="brand">OrderDesk${S && S.role === 'admin' ? '<span class="tag">Admin</span>' : ''}</div>${right}</div></header>`;
+const tabBtn = (k, label) => `<button class="tab ${ui.tab === k ? 'on' : ''}" onclick="A.tab('${k}')">${label}</button>`;
+
+/* ---------- login ---------- */
+function viewLogin(){
+  return `<div class="login">
+  <div class="lmark">OD</div>
+  <h1>OrderDesk</h1>
+  <p class="muted">Enter your name to see the items set up for you and place an order.</p>
+  <form class="card lcard" onsubmit="return A.login(event)">
+    <label class="l" for="lname">Your name</label>
+    <input class="f" id="lname" autocomplete="off" autocapitalize="words" placeholder="e.g. Sharma Traders">
+    <div id="lerr" class="err"></div>
+    <button class="btn primary block" style="margin-top:6px">Continue</button>
+  </form>
+  <div class="demo"><div class="meta">Demo customers (tap to fill in):</div>
+    <div class="chips wrapc">${DEMO.map(([n, c]) => `<button class="chip" onclick="A.fill(${JSON.stringify(n).replace(/"/g, '&quot;')})">${esc(n)} · ${c} items</button>`).join('')}</div></div>
+  <details class="card lcard admin"><summary>Admin login</summary>
+    <form onsubmit="return A.adminLogin(event)">
+      <label class="l" for="pin">Admin PIN</label>
+      <input class="f" id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Demo PIN: 1234">
+      <div id="perr" class="err"></div>
+      <button class="btn block" style="margin-top:6px">Open admin panel</button>
+    </form></details>
+  <p class="meta center">Demo version: data is saved in this browser only.</p>
+</div>`;
+}
+A.fill = n => { $('#lname').value = n; $('#lerr').textContent = ''; };
+A.login = e => {
+  e.preventDefault();
+  const v = norm($('#lname').value);
+  if (!v) { $('#lerr').textContent = 'Please enter your name.'; return false; }
+  db = readDb() || db;
+  const c = db.customers.find(c => norm(c.name) === v);
+  if (!c) { $('#lerr').textContent = 'We could not find this name. Please check the spelling or contact your supplier.'; return false; }
+  setS({role: 'cust', id: c.id}); cart = {}; ui = UI0(); ui.tab = 'shop'; render(); window.scrollTo(0, 0); return false;
+};
+A.adminLogin = e => {
+  e.preventDefault();
+  db = readDb() || db;
+  if ($('#pin').value !== String(db.settings.pin)) { $('#perr').textContent = 'Wrong PIN.'; return false; }
+  setS({role: 'admin'}); ui = UI0(); ui.tab = 'orders';
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
+  known = new Set(db.orders.map(o => o.id)); render(); window.scrollTo(0, 0); return false;
+};
+A.logout = () => { setS(null); cart = {}; ui = UI0(); A.close(); render(); };
+A.tab = t => { ui.tab = t; render(); window.scrollTo(0, 0); };
+
+/* ---------- customer ---------- */
+function viewCust(c){
+  const mine = db.orders.filter(o => o.cust === c.id);
+  return topbar(`<div class="who"><span>Logged in as</span><b>${esc(c.name)}</b></div><button class="hbtn" onclick="A.logout()">Logout</button>`)
+    + `<main class="wrap"><div class="tabs">${tabBtn('shop', `Order items <span class="cnt">${c.items.length}</span>`)}${tabBtn('mine', `My orders <span class="cnt">${mine.length}</span>`)}</div>`
+    + (ui.tab === 'mine' ? mineBody(mine) : shopBody(c)) + `</main>`
+    + (ui.tab === 'shop' ? `<div class="bar" id="bar"></div>` : '');
+}
+function shopBody(c){
+  const cats = ['All', ...new Set(c.items.map(item).filter(Boolean).map(i => i.cat))];
+  if (!c.items.length) return `<div class="empty">No items have been set up for you yet.<br>Please contact your supplier.</div>`;
+  return `<div class="toolbar"><input class="f" id="q" type="search" placeholder="Search your ${c.items.length} items" value="${esc(ui.q)}" oninput="A.search(this.value)"></div>
+  <div class="chips">${cats.map(k => `<button class="chip ${ui.cat === k ? 'on' : ''}" data-k="${esc(k)}" onclick="A.cat(this.dataset.k)">${esc(k)}</button>`).join('')}</div>
+  <div class="list" id="list">${shopList(c)}</div>`;
+}
+function shopList(c){
+  const q = norm(ui.q);
+  const its = c.items.map(item).filter(i => i && (ui.cat === 'All' || i.cat === ui.cat) && (!q || norm(i.name + ' ' + i.code).includes(q)));
+  return its.length ? its.map(itemRow).join('') : `<div class="empty">No items match your search.</div>`;
+}
+function itemRow(i){
+  const q = cart[i.id] || 0;
+  return `<div class="card item ${q ? 'has' : ''}" id="r-${i.id}"><div class="info"><div class="nm">${esc(i.name)}</div><div class="meta">${esc(i.code)} · per ${esc(i.uom)} · <b class="ink">${inr(i.rate)}</b></div></div>
+  <div class="step"><button aria-label="Decrease" onclick="A.q('${i.id}',-1)">−</button><input inputmode="numeric" aria-label="Quantity" value="${q || ''}" placeholder="0" onchange="A.setq('${i.id}',this.value)" onfocus="this.select()"><button aria-label="Increase" onclick="A.q('${i.id}',1)">+</button></div></div>`;
+}
+A.search = v => { ui.q = v; const el = $('#list'); if (el) el.innerHTML = shopList(cust(S.id)); };
+A.cat = k => { ui.cat = k; render(); };
+function setQty(id, n){ n = Math.max(0, Math.min(99999, Math.floor(n) || 0)); if (n) cart[id] = n; else delete cart[id]; const el = $('#r-' + id); if (el) { el.classList.toggle('has', !!n); const inp = el.querySelector('input'); if (inp && inp.value !== String(n || '')) inp.value = n || ''; } bar(); }
+A.q = (id, d) => setQty(id, (cart[id] || 0) + d);
+A.setq = (id, v) => setQty(id, parseInt(v, 10));
+const cartLines = () => Object.entries(cart).map(([id, q]) => { const it = item(id); return it ? line(it, q) : null; }).filter(Boolean);
+function bar(){
+  const el = $('#bar'); if (!el) return;
+  const ls = cartLines(), n = ls.length, total = sum(ls, l => l.qty * l.rate);
+  el.classList.toggle('show', n > 0);
+  if (!el.firstChild) el.innerHTML = `<div class="wrap"><div class="bsum"><b id="bn"></b><span class="meta" id="bt"></span></div><button class="btn ghost sm" onclick="A.clearCart()">Clear</button><button class="btn primary" onclick="A.review()">Review order</button></div>`;
+  $('#bn').textContent = `${n} item${n === 1 ? '' : 's'} selected`;
+  $('#bt').textContent = `${inr(total)} (est.)`;
+}
+A.clearCart = () => { cart = {}; render(); };
+A.review = () => {
+  const ls = cartLines(); if (!ls.length) return;
+  modal('Review your order', `<table class="t"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Amount</th></tr></thead><tbody>
+  ${ls.map(l => `<tr><td>${esc(l.name)}<div class="meta">${inr(l.rate)} / ${esc(l.uom)}</div></td><td class="r">${l.qty} ${esc(l.uom)}</td><td class="r">${inr(l.qty * l.rate)}</td></tr>`).join('')}
+  </tbody><tfoot><tr><th colspan="2">Total (estimated)</th><th class="r">${inr(sum(ls, l => l.qty * l.rate))}</th></tr></tfoot></table>
+  <label class="l" for="note">Note for the supplier (optional)</label><textarea class="f" id="note" rows="2" placeholder="Delivery time, special request…"></textarea>`,
+  `<button class="btn" onclick="A.close()">Edit items</button><button class="btn primary" onclick="A.place()">Place order</button>`);
+};
+A.place = () => {
+  const ls = cartLines(); if (!ls.length) return;
+  const note = ($('#note') || {}).value || '';
+  let o;
+  mutate(d => { const c = d.customers.find(x => x.id === S.id); o = mkOrder(d, c, ls, note.trim()); d.orders.push(o); });
+  cart = {}; ui.tab = 'mine'; render();
+  const wa = db.settings.wa;
+  modal('Order placed', `<div class="done"><div class="big">✓</div><h3>${esc(o.no)}</h3><p class="muted">${o.lines.length} items · ${inr(o.total)}<br>Your supplier has been notified and will confirm shortly.</p>
+  ${wa ? `<a class="btn wa" target="_blank" rel="noopener" href="${waLink(wa, waText(o))}">Also send on WhatsApp</a>` : ''}</div>
+  <div class="tip">Demo tip: open this page in another tab, log in as Admin, and place another order — the new order pops up there with a sound.</div>`,
+  `<button class="btn primary" onclick="A.close()">Done</button>`);
+};
+function mineBody(list){
+  if (!list.length) return `<div class="empty">You have not placed any orders yet.</div>`;
+  return `<div class="olist">${[...list].sort((a, b) => b.at - a.at).map(o => orderCard(o, false)).join('')}</div>`;
+}
+A.reorder = id => {
+  const o = db.orders.find(x => x.id === id), c = cust(S.id); if (!o || !c) return;
+  cart = {}; let skipped = 0;
+  o.lines.forEach(l => { if (c.items.includes(l.item) && item(l.item)) cart[l.item] = l.qty; else skipped++; });
+  ui.tab = 'shop'; ui.q = ''; ui.cat = 'All'; render(); window.scrollTo(0, 0);
+  toast('Items from ' + esc(o.no) + ' added. Change quantities and review.' + (skipped ? ` (${skipped} item(s) no longer available)` : ''));
+};
+
+/* ---------- order card (shared) ---------- */
+function orderCard(o, admin){
+  const open = !!ui.open[o.id];
+  const nItems = o.lines.length;
+  let actions = '';
+  if (admin) {
+    const c = cust(o.cust);
+    if (o.status === 'New') actions += `<button class="btn primary sm" onclick="A.status('${o.id}','Accepted')">Accept</button>`;
+    if (o.status === 'Accepted') actions += `<button class="btn primary sm" onclick="A.status('${o.id}','Dispatched')">Mark dispatched</button>`;
+    if (o.status === 'New' || o.status === 'Accepted') actions += `<button class="btn danger sm" onclick="A.status('${o.id}','Cancelled')">Cancel</button>`;
+    if (c && c.phone) actions += `<a class="btn sm" target="_blank" rel="noopener" href="${waLink('91' + c.phone, `Hello ${c.name}, your order ${o.no} is ${o.status.toLowerCase()}. Thank you!`)}">WhatsApp customer</a>`;
+  } else {
+    actions = `<button class="btn sm" onclick="A.reorder('${o.id}')">Order these again</button>`;
+  }
+  return `<div class="card order ${admin && !o.seen ? 'unseen' : ''}">
+  <div class="ohead" onclick="A.toggle('${o.id}')"><div><div class="ono">${esc(o.no)}<span class="pill s-${o.status}">${o.status}</span></div>
+  <div class="meta">${admin ? esc(o.custName) + ' · ' : ''}${when(o.at)}</div></div>
+  <div class="amt">${inr(o.total)}<div class="meta">${nItems} item${nItems === 1 ? '' : 's'} ${open ? '▴' : '▾'}</div></div></div>
+  ${open ? `<div class="obody"><table class="t"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead><tbody>
+  ${o.lines.map(l => `<tr><td>${esc(l.name)}<div class="meta">${esc(l.code)}</div></td><td class="r">${l.qty} ${esc(l.uom)}</td><td class="r">${inr(l.rate)}</td><td class="r">${inr(l.qty * l.rate)}</td></tr>`).join('')}
+  </tbody><tfoot><tr><th colspan="3">Total</th><th class="r">${inr(o.total)}</th></tr></tfoot></table>
+  ${o.note ? `<div class="note"><b>Note:</b> ${esc(o.note)}</div>` : ''}<div class="btnrow" style="margin-top:10px">${actions}</div></div>` : ''}</div>`;
+}
+A.toggle = id => {
+  ui.open[id] = !ui.open[id];
+  const o = db.orders.find(x => x.id === id);
+  if (S.role === 'admin' && o && !o.seen) mutate(d => { const x = d.orders.find(y => y.id === id); if (x) x.seen = true; });
+  render();
+};
+
+/* ---------- admin ---------- */
+function viewAdmin(){
+  const nNew = db.orders.filter(o => o.status === 'New').length, unseen = db.orders.filter(o => !o.seen).length;
+  const body = {orders: ordersBody, customers: custBody, items: itemsBody, settings: settingsBody}[ui.tab] || ordersBody;
+  return topbar(`<div class="who"></div>
+    <button class="hbtn" onclick="A.tab('orders')" aria-label="New orders">🔔${unseen ? `<span class="dot">${unseen}</span>` : ''}</button>
+    <button class="hbtn" onclick="A.logout()">Logout</button>`)
+    + `<main class="wrap"><div class="tabs">${tabBtn('orders', 'Orders' + (nNew ? `<span class="badge">${nNew}</span>` : ''))}${tabBtn('customers', `Customers <span class="cnt">${db.customers.length}</span>`)}${tabBtn('items', `Items <span class="cnt">${db.items.length}</span>`)}${tabBtn('settings', 'Settings')}</div>${body()}</main>`;
+}
+function ordersBody(){
+  const os = db.orders;
+  const today = new Date().toDateString();
+  const todayVal = sum(os.filter(o => new Date(o.at).toDateString() === today && o.status !== 'Cancelled'), o => o.total);
+  const cnt = s => os.filter(o => o.status === s).length;
+  const notifOff = !('Notification' in window) || Notification.permission !== 'granted';
+  return `<div class="stats">
+    <div class="card stat"><b style="color:var(--blue)">${cnt('New')}</b><span>New</span></div>
+    <div class="card stat"><b style="color:var(--warn)">${cnt('Accepted')}</b><span>Accepted</span></div>
+    <div class="card stat"><b style="color:var(--ok)">${cnt('Dispatched')}</b><span>Dispatched</span></div>
+    <div class="card stat"><b>${inr(todayVal)}</b><span>Today's orders</span></div></div>
+  ${notifOff ? `<div class="tip">New orders appear here with a sound. <a href="#" onclick="A.notif();return false">Turn on pop-up notifications</a> to get alerts even when this tab is in the background.</div>` : ''}
+  <div class="toolbar"><input class="f" id="oq" type="search" placeholder="Search by customer or order no." value="${esc(ui.oq)}" oninput="A.oq(this.value)"></div>
+  <div class="chips">${['All', ...STATUSES].map(s => `<button class="chip ${ui.st === s ? 'on' : ''}" onclick="A.st('${s}')">${s}${s !== 'All' ? ' · ' + cnt(s) : ''}</button>`).join('')}</div>
+  <div class="olist" id="olist">${orderList()}</div>`;
+}
+function orderList(){
+  const q = norm(ui.oq);
+  const os = db.orders.filter(o => (ui.st === 'All' || o.status === ui.st) && (!q || norm(o.custName + ' ' + o.no).includes(q))).sort((a, b) => b.at - a.at);
+  return os.length ? os.map(o => orderCard(o, true)).join('') : `<div class="empty">No orders here.</div>`;
+}
+A.oq = v => { ui.oq = v; $('#olist').innerHTML = orderList(); };
+A.st = s => { ui.st = s; render(); };
+A.status = (id, st) => {
+  if (st === 'Cancelled' && !confirm('Cancel this order?')) return;
+  let no; mutate(d => { const o = d.orders.find(x => x.id === id); if (o) { o.status = st; o.seen = true; no = o.no; } });
+  toast(esc(no) + ' marked ' + st.toLowerCase() + '.'); render();
+};
+
+/* customers */
+function custBody(){
+  return `<div class="toolbar"><input class="f" id="cq" type="search" placeholder="Search ${db.customers.length} customers" value="${esc(ui.cq)}" oninput="A.cq(this.value)"><button class="btn primary" onclick="A.editCust()">+ Add</button></div>
+  <div class="meta" style="margin:0 2px 8px">Tap a customer to choose which items they can see and order.</div>
+  <div class="card rows" id="clist">${custList()}</div>`;
+}
+function custList(){
+  const q = norm(ui.cq), last = {};
+  db.orders.forEach(o => { if (!last[o.cust] || o.at > last[o.cust]) last[o.cust] = o.at; });
+  const cs = db.customers.filter(c => !q || norm(c.name + ' ' + c.phone).includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+  return cs.length ? cs.map(c => `<div class="row" onclick="A.editCust('${c.id}')"><div class="av">${esc(initials(c.name))}</div><div class="info"><div class="nm">${esc(c.name)}</div><div class="meta">${esc(c.phone || '—')}${last[c.id] ? ' · last order ' + when(last[c.id]) : ''}</div></div><div class="rt"><b>${c.items.length}</b> items</div></div>`).join('') : `<div class="empty">No customers found.</div>`;
+}
+A.cq = v => { ui.cq = v; $('#clist').innerHTML = custList(); };
+A.editCust = id => {
+  const c = id ? cust(id) : {id: null, name: '', phone: '', items: []};
+  if (!c) return;
+  edit = {kind: 'cust', id: c.id, sel: new Set(c.items), q: ''};
+  const others = db.customers.filter(x => x.id !== c.id).sort((a, b) => a.name.localeCompare(b.name));
+  modal(id ? 'Edit customer' : 'New customer', `<div class="grid2">
+    <div><label class="l" for="cname">Name (customer logs in with this)</label><input class="f" id="cname" value="${esc(c.name)}" placeholder="e.g. Shree Ganesh Stores"></div>
+    <div><label class="l" for="cphone">Mobile number</label><input class="f" id="cphone" inputmode="tel" value="${esc(c.phone)}" placeholder="10-digit mobile"></div></div>
+    <div class="selbar"><label class="l" style="margin:0">Items this customer can see</label><b id="selc"></b></div>
+    <div class="toolbar"><input class="f" type="search" placeholder="Search items" oninput="A.eq(this.value)">
+    <select class="f" style="flex:0 1 190px" onchange="A.copyFrom(this.value);this.value=''"><option value="">Copy from customer…</option>${others.map(o => `<option value="${o.id}">${esc(o.name)} (${o.items.length})</option>`).join('')}</select></div>
+    <div id="checks"></div>`,
+    `${id ? `<button class="btn danger" onclick="A.delCust('${id}')">Delete</button>` : ''}<span class="sp"></span><button class="btn" onclick="A.close()">Cancel</button><button class="btn primary" onclick="A.saveCust()">Save</button>`);
+  drawChecks();
+};
+A.copyFrom = id => { const o = cust(id); if (!o || !edit) return; edit.sel = new Set(o.items); drawChecks(); toast(`Copied ${o.items.length} items from ${esc(o.name)}. Adjust and save.`); };
+A.saveCust = () => {
+  const name = $('#cname').value.trim().replace(/\s+/g, ' '), phone = $('#cphone').value.replace(/\D/g, '');
+  if (!name) { toast('Please enter the customer name.'); return; }
+  db = readDb() || db;
+  if (db.customers.some(c => c.id !== edit.id && norm(c.name) === norm(name))) { toast('Another customer already has this name. Names must be unique because customers log in with them.'); return; }
+  const items = db.items.filter(i => edit.sel.has(i.id)).map(i => i.id), isNew = !edit.id;
+  mutate(d => {
+    if (isNew) d.customers.push({id: 'C' + uid(), name, phone, items});
+    else { const c = d.customers.find(x => x.id === edit.id); if (c) Object.assign(c, {name, phone, items}); }
+  });
+  toast(`${esc(name)} saved with ${items.length} items.`); A.close(); render();
+};
+A.delCust = id => {
+  const c = cust(id); if (!c || !confirm(`Delete ${c.name}? Their past orders stay in the order list.`)) return;
+  mutate(d => { d.customers = d.customers.filter(x => x.id !== id); }); A.close(); render(); toast('Customer deleted.');
+};
+
+/* items */
+function itemsBody(){
+  return `<div class="toolbar"><input class="f" id="iq" type="search" placeholder="Search ${db.items.length} items" value="${esc(ui.iq)}" oninput="A.iq(this.value)"><button class="btn primary" onclick="A.editItem()">+ Add</button></div>
+  <div class="meta" style="margin:0 2px 8px">Tap an item to edit it or assign it to many customers at once.</div>
+  <div class="card rows" id="ilist">${itemList()}</div>`;
+}
+function itemList(){
+  const q = norm(ui.iq), use = {};
+  db.customers.forEach(c => c.items.forEach(id => { use[id] = (use[id] || 0) + 1; }));
+  const is = db.items.filter(i => !q || norm(i.name + ' ' + i.code + ' ' + i.cat).includes(q));
+  return is.length ? is.map(i => `<div class="row" onclick="A.editItem('${i.id}')"><div class="info"><div class="nm">${esc(i.name)}</div><div class="meta">${esc(i.code)} · ${esc(i.cat)} · per ${esc(i.uom)}</div></div><div class="rt"><b>${inr(i.rate)}</b><div class="meta">${use[i.id] || 0} customers</div></div></div>`).join('') : `<div class="empty">No items found.</div>`;
+}
+A.iq = v => { ui.iq = v; $('#ilist').innerHTML = itemList(); };
+A.editItem = id => {
+  const i = id ? item(id) : {id: null, code: 'ITM-' + String(db.items.length + 1).padStart(3, '0'), name: '', cat: '', uom: 'Pcs', rate: ''};
+  if (!i) return;
+  edit = {kind: 'item', id: i.id, sel: new Set(id ? db.customers.filter(c => c.items.includes(id)).map(c => c.id) : []), q: ''};
+  const cats = [...new Set(db.items.map(x => x.cat))];
+  modal(id ? 'Edit item' : 'New item', `<div class="grid2">
+    <div><label class="l" for="iname">Item name</label><input class="f" id="iname" value="${esc(i.name)}"></div>
+    <div><label class="l" for="icode">Item code</label><input class="f" id="icode" value="${esc(i.code)}"></div>
+    <div><label class="l" for="icat">Category</label><input class="f" id="icat" list="catlist" value="${esc(i.cat)}"><datalist id="catlist">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
+    <div class="grid2" style="gap:0 8px"><div><label class="l" for="iuom">Unit</label><input class="f" id="iuom" value="${esc(i.uom)}"></div><div><label class="l" for="irate">Rate (₹)</label><input class="f" id="irate" inputmode="decimal" value="${esc(i.rate)}"></div></div></div>
+    <div class="selbar"><label class="l" style="margin:0">Customers who can see this item</label><b id="selc"></b></div>
+    <div class="toolbar"><input class="f" type="search" placeholder="Search customers" oninput="A.eq(this.value)"></div>
+    <div id="checks"></div>`,
+    `${id ? `<button class="btn danger" onclick="A.delItem('${id}')">Delete</button>` : ''}<span class="sp"></span><button class="btn" onclick="A.close()">Cancel</button><button class="btn primary" onclick="A.saveItem()">Save</button>`);
+  drawChecks();
+};
+A.saveItem = () => {
+  const v = k => $('#' + k).value.trim();
+  const it = {name: v('iname'), code: v('icode'), cat: v('icat') || 'General', uom: v('iuom') || 'Pcs', rate: parseFloat(v('irate'))};
+  if (!it.name || !it.code) { toast('Item name and code are required.'); return; }
+  if (!(it.rate >= 0)) { toast('Please enter a valid rate.'); return; }
+  db = readDb() || db;
+  if (db.items.some(x => x.id !== edit.id && norm(x.code) === norm(it.code))) { toast('This item code is already used.'); return; }
+  const sel = edit.sel, id = edit.id || 'I' + uid();
+  mutate(d => {
+    const ex = d.items.find(x => x.id === id);
+    if (ex) Object.assign(ex, it); else d.items.push({id, ...it});
+    d.customers.forEach(c => { const has = c.items.includes(id); if (sel.has(c.id) && !has) c.items.push(id); if (!sel.has(c.id) && has) c.items = c.items.filter(x => x !== id); });
+  });
+  toast(`${esc(it.name)} saved · visible to ${sel.size} customers.`); A.close(); render();
+};
+A.delItem = id => {
+  const i = item(id); if (!i || !confirm(`Delete ${i.name}? It will be removed from every customer's list.`)) return;
+  mutate(d => { d.items = d.items.filter(x => x.id !== id); d.customers.forEach(c => { c.items = c.items.filter(x => x !== id); }); });
+  A.close(); render(); toast('Item deleted.');
+};
+
+/* shared checklist used by both editors */
+function drawChecks(){
+  if (!edit) return;
+  const box = $('#checks'); if (!box) return;
+  const q = norm(edit.q);
+  let html = '';
+  if (edit.kind === 'cust') {
+    const groups = {};
+    db.items.filter(i => !q || norm(i.name + ' ' + i.code).includes(q)).forEach(i => { (groups[i.cat] = groups[i.cat] || []).push(i); });
+    Object.entries(groups).forEach(([cat, list]) => {
+      const on = list.filter(i => edit.sel.has(i.id)).length;
+      html += `<div class="ghead"><span>${esc(cat)} · ${on}/${list.length}</span><span class="btnrow"><button class="btn sm" data-k="${esc(cat)}" onclick="A.grp(this.dataset.k,true)">All</button><button class="btn sm" data-k="${esc(cat)}" onclick="A.grp(this.dataset.k,false)">None</button></span></div>
+      <div class="checks">${list.map(i => ck(i.id, i.name, inr(i.rate) + ' / ' + i.uom)).join('')}</div>`;
+    });
+  } else {
+    const list = db.customers.filter(c => !q || norm(c.name).includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+    const on = list.filter(c => edit.sel.has(c.id)).length;
+    html = `<div class="ghead"><span>${q ? 'Matching' : 'All'} customers · ${on}/${list.length}</span><span class="btnrow"><button class="btn sm" onclick="A.grp(null,true)">All</button><button class="btn sm" onclick="A.grp(null,false)">None</button></span></div>
+    <div class="checks">${list.map(c => ck(c.id, c.name, c.items.length + ' items')).join('')}</div>`;
+  }
+  box.innerHTML = html || `<div class="empty">Nothing matches.</div>`;
+  $('#selc').textContent = edit.sel.size + ' selected';
+}
+const ck = (id, label, sub) => `<label class="ck ${edit.sel.has(id) ? 'on' : ''}"><input type="checkbox" ${edit.sel.has(id) ? 'checked' : ''} onchange="A.ck('${id}',this.checked)"><span>${esc(label)}<div class="meta">${esc(sub)}</div></span></label>`;
+A.ck = (id, on) => { on ? edit.sel.add(id) : edit.sel.delete(id); drawChecks(); };
+A.eq = v => { edit.q = v; drawChecks(); };
+A.grp = (cat, on) => {
+  const q = norm(edit.q);
+  const ids = edit.kind === 'cust'
+    ? db.items.filter(i => i.cat === cat && (!q || norm(i.name + ' ' + i.code).includes(q))).map(i => i.id)
+    : db.customers.filter(c => !q || norm(c.name).includes(q)).map(c => c.id);
+  ids.forEach(id => on ? edit.sel.add(id) : edit.sel.delete(id)); drawChecks();
+};
+
+/* settings */
+function settingsBody(){
+  const perm = !('Notification' in window) ? 'Not supported on this browser' : Notification.permission === 'granted' ? 'On' : Notification.permission === 'denied' ? 'Blocked (allow it in browser site settings)' : 'Off';
+  return `<div class="card sect"><h3>Order notifications</h3>
+    <p>New orders show here instantly with a sound and an on-screen alert. Pop-up notifications: <b>${perm}</b>.</p>
+    <div class="btnrow"><button class="btn" onclick="A.notif()">Turn on pop-up notifications</button><button class="btn" onclick="A.test()">Test alert</button></div>
+    <label class="l" for="swa">Admin WhatsApp number (with country code)</label>
+    <div class="toolbar"><input class="f" id="swa" inputmode="tel" placeholder="e.g. 919876543210" value="${esc(db.settings.wa)}"><button class="btn primary" onclick="A.saveWa()">Save</button></div>
+    <p>When set, customers get a "Send on WhatsApp" button after ordering, so you also receive the order on your phone.</p></div>
+  <div class="card sect"><h3>Admin PIN</h3><p>Current demo PIN is 1234 unless you changed it.</p>
+    <div class="toolbar"><input class="f" id="spin" type="password" inputmode="numeric" placeholder="New PIN (min 4 digits)"><button class="btn primary" onclick="A.savePin()">Change</button></div></div>
+  <div class="card sect"><h3>Data</h3><p>${db.customers.length} customers · ${db.items.length} items · ${db.orders.length} orders. In this demo everything is saved in this browser.</p>
+    <div class="btnrow"><button class="btn" onclick="A.csv()">Export orders (CSV)</button><button class="btn" onclick="A.backup()">Backup (JSON)</button>
+    <label class="btn">Restore<input type="file" accept=".json,application/json" hidden onchange="A.restore(this)"></label>
+    <button class="btn danger" onclick="A.reset()">Reset demo data</button></div></div>`;
+}
+A.saveWa = () => { const v = $('#swa').value.replace(/\D/g, ''); mutate(d => { d.settings.wa = v; }); toast(v ? 'WhatsApp number saved.' : 'WhatsApp number cleared.'); render(); };
+A.savePin = () => { const v = $('#spin').value.trim(); if (!/^\d{4,8}$/.test(v)) { toast('PIN must be 4 to 8 digits.'); return; } mutate(d => { d.settings.pin = v; }); toast('Admin PIN changed.'); render(); };
+A.notif = () => {
+  if (!('Notification' in window)) { toast('This browser does not support pop-up notifications.'); return; }
+  Notification.requestPermission().then(p => { toast(p === 'granted' ? 'Pop-up notifications are on.' : 'Notifications were not allowed.'); render(); });
+};
+A.test = () => alertOrder({id: '', no: 'SO-TEST', custName: 'Test Customer', lines: [1, 2, 3], total: 1234}, true);
+function download(name, text, type){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type})); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+A.csv = () => {
+  const rows = [['Order No', 'Date', 'Customer', 'Status', 'Item Code', 'Item', 'Qty', 'UOM', 'Rate', 'Amount', 'Note']];
+  [...db.orders].sort((a, b) => a.at - b.at).forEach(o => o.lines.forEach(l => rows.push([o.no, new Date(o.at).toLocaleString('en-IN'), o.custName, o.status, l.code, l.name, l.qty, l.uom, l.rate, l.qty * l.rate, o.note])));
+  download('orders.csv', '﻿' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n'), 'text/csv');
+};
+A.backup = () => download('orderdesk-backup.json', JSON.stringify(db, null, 1), 'application/json');
+A.restore = inp => {
+  const f = inp.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { try { const d = JSON.parse(r.result); if (d.v !== 1 || !Array.isArray(d.items) || !Array.isArray(d.customers) || !Array.isArray(d.orders)) throw 0; db = d; persist(); known = new Set(db.orders.map(o => o.id)); render(); toast('Data restored.'); } catch (e) { toast('That file is not a valid OrderDesk backup.'); } };
+  r.readAsText(f);
+};
+A.reset = () => { if (!confirm('Reset all demo data? Customers, items and orders go back to the starting sample.')) return; db = seed(); persist(); known = new Set(db.orders.map(o => o.id)); ui.open = {}; render(); toast('Demo data reset.'); };
+
+/* ---------- WhatsApp ---------- */
+function waText(o){ return `New order ${o.no}\nCustomer: ${o.custName}\n` + o.lines.map(l => `• ${l.name} × ${l.qty} ${l.uom}`).join('\n') + `\nTotal (est.): ${inr(o.total)}` + (o.note ? `\nNote: ${o.note}` : ''); }
+const waLink = (num, t) => `https://wa.me/${String(num).replace(/\D/g, '')}?text=${encodeURIComponent(t)}`;
+
+/* ---------- live alerts for admin ---------- */
+function beep(){
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audio.currentTime;
+    [[0, 784], [0.18, 1046]].forEach(([dt, f]) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = f; o.type = 'sine';
+      g.gain.setValueAtTime(0.0001, t + dt); g.gain.exponentialRampToValueAtTime(0.25, t + dt + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.16);
+      o.connect(g); g.connect(audio.destination); o.start(t + dt); o.stop(t + dt + 0.2);
+    });
+  } catch (e) {}
+}
+function alertOrder(o, test){
+  const body = `${o.custName} · ${o.lines.length} items · ${inr(o.total)}`;
+  toast(`<b>New order ${esc(o.no)}</b><br>${esc(body)}`, 8000, test ? null : () => { ui.tab = 'orders'; ui.st = 'All'; ui.open[o.id] = true; mutate(d => { const x = d.orders.find(y => y.id === o.id); if (x) x.seen = true; }); render(); window.scrollTo(0, 0); });
+  beep();
+  try { if ('Notification' in window && Notification.permission === 'granted') { const n = new Notification('New order ' + o.no, {body, tag: o.no}); n.onclick = () => { window.focus(); n.close(); }; } } catch (e) {}
+  if (navigator.vibrate) try { navigator.vibrate(200); } catch (e) {}
+}
+function checkNew(){
+  if (!S || S.role !== 'admin') return;
+  const fresh = readDb(); if (!fresh) return;
+  const changed = JSON.stringify(fresh.orders) !== JSON.stringify(db.orders);
+  db = fresh;
+  const fresh_new = db.orders.filter(o => !known.has(o.id));
+  fresh_new.forEach(o => { known.add(o.id); alertOrder(o); });
+  if (changed && !$('#modal').innerHTML) render();
+}
+window.addEventListener('storage', e => {
+  if (e.key !== KEY) return;
+  if (S && S.role === 'admin') checkNew();
+  else if (S && S.role === 'cust') { db = readDb() || db; if (ui.tab === 'mine' && !$('#modal').innerHTML) render(); }
+});
+setInterval(checkNew, 4000);
+
+/* ---------- modal & toast ---------- */
+function modal(title, body, foot){
+  $('#modal').innerHTML = `<div class="mback" onclick="if(event.target===this)A.close()"><div class="mbox" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mhead"><h3>${esc(title)}</h3><button class="x" onclick="A.close()" aria-label="Close">×</button></div><div class="mbody">${body}</div>${foot ? `<div class="mfoot">${foot}</div>` : ''}</div></div>`;
+  document.body.classList.add('noscroll');
+}
+A.close = () => { $('#modal').innerHTML = ''; document.body.classList.remove('noscroll'); edit = null; };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modal').innerHTML) A.close(); });
+function toast(html, ms = 3500, onClick){
+  const t = document.createElement('div'); t.className = 'toast' + (onClick ? ' click' : ''); t.innerHTML = html;
+  if (onClick) t.onclick = () => { onClick(); t.remove(); };
+  $('#toasts').appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, ms);
+}
+
+/* ---------- start ---------- */
+if (S && S.role === 'admin') { known = new Set(db.orders.map(o => o.id)); ui.tab = 'orders'; }
+if (S && S.role === 'cust') ui.tab = 'shop';
+render();
+</script>
+</body>
+</html>
